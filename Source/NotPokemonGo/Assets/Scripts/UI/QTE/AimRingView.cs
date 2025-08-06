@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace UI.QTE
 {
-    public class QTEButtonView : MonoBehaviour
+    public class AimRingView : MonoBehaviour
     {
         public RectTransform rectTransform;
         
@@ -27,9 +27,9 @@ namespace UI.QTE
         private Vector2 _visualTargetSize;
         private Vector2 _visualEndSize;
 
-        public event Action<QTEButtonView> Successed;
-        public event Action<QTEButtonView> Invalided;
-        public event Action<QTEButtonView> Released;
+        public event Action<AimRingView> Successed;
+        public event Action<AimRingView> Invalided;
+        public event Action<AimRingView> Released;
         
         private bool _isSuccesTime => CurrentTime >= TargetTime - Offset && CurrentTime <= TargetTime;
 
@@ -105,9 +105,7 @@ namespace UI.QTE
             rectTransform.anchoredPosition = Vector2.zero;
         }
 
-        public void ReleaseToPool()
-        {
+        public void ReleaseToPool() =>
             Released?.Invoke(this);
-        }
     }
 }
