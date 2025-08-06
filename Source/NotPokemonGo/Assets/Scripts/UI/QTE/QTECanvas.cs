@@ -4,7 +4,7 @@ namespace UI.QTE
 {
     public class QTECanvas : MonoBehaviour
     {
-        public QTEButtonView QTEButtonViewPrefab;
-        public QTEBacgroundPanel QTEBacgroundPanelPrefab;
+        public AimRingView AimRingViewPrefab;
+        public SwipeQTEView SwipeViewPrefab;
     }
 }

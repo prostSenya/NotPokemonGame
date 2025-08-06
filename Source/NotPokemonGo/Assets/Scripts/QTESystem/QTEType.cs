@@ -2,12 +2,12 @@ namespace QTESystem
 {
     public enum QTEType
     {
-        RythmTap = 1,
-        SwipeToDictionary = 2,
+        RhythmTap = 1,
+        Swipe = 2,
         HoldZone = 3,
-        GetIntoCircle = 4,
-        SwipeByTrajectory = 5,
-        MultipleClicks = 6,
-        Parry = 7
+        AimRing = 4,
+        TrajectorySwipe = 5,
+        Mash = 6,
+        CounterReaction = 7
     }
 }

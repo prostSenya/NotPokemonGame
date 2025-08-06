@@ -11,11 +11,13 @@ namespace QTESystem
     {
         public QTEMode qteMode;
         public float Speed;
-        public QTEButtonView QTEButtonView;
+        public AimRingView AimRingView;
         public Image Overlay;
 
         public float TargetTime;
         public float Offset;
         public float TimeToNextTarget;
+
+        public SwipeDirection Direction;
     }
 }
