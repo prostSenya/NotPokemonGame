@@ -1,6 +1,6 @@
 [readme.md](https://github.com/user-attachments/files/22012748/readme.md)
 💎 NotPokemonGame  
-JRPG/TD с пошаговыми боями и QTE на Unity  
+JRPG с пошаговыми боями и QTE на Unity  
 Unity • C# • VContainer
 
 ---
@@ -40,14 +40,20 @@ Source/
 - **State Machine** — управление игровыми состояниями (меню, бой, QTE и др.).
 - **DI через VContainer** — модульная организация зависимостей.
 - **Service Layer** — изоляция общей логики: звук, загрузка данных, фабрики объектов.
-- **MVP/MVVM для UI** — разделение логики и отображения.
+- **MVP для UI** — разделение логики и отображения.
 - **Расширяемость** — добавление новых способностей, QTE и эффектов без изменения существующего кода.
 
 ---
 
 🔧 **Примеры реализации паттернов**
 
-🎭 AbilityApplicatorService (сервис активирует применяет армаменты или кастаменты к нужным персонажам):
+🎭 AbilityApplicatorService (сервис активирует применяет армаменты или кастаменты к нужным персонажам)
+Пример работы Ability (способности)
+в момент хода персонажа, игрок выбирает нужную способность и накладывает на цель (враг/союзник)
+Способность может быть двух видов
+- Armament -> летящий выстрел (projectile)
+- Castament -> магический, дальний урон 
+:
 ```csharp
 using System.Collections;
 using System.Collections.Generic;
@@ -213,7 +219,7 @@ namespace Infrastructure.StateMachines.BattleStateMachine.States
 
 ⚔️ **Боевая система**
 - Инициатива/ловкость влияет на порядок ходов.
-- Каждое действие тратит очки AP.
+- Каждое действие тратит очки ловкости.
 - Поддерживаются DoT/HoT эффекты, зависящие от внутриигрового времени.
 
 🎭 **QTE события**
@@ -222,7 +228,6 @@ namespace Infrastructure.StateMachines.BattleStateMachine.States
 
 🎮 **UI**
 - Реализован через презентеры (MVP/MVVM).
-- Логика отделена от Unity‑вью для тестируемости.
 
 ---
 
@@ -233,17 +238,6 @@ namespace Infrastructure.StateMachines.BattleStateMachine.States
 💻 Язык | C# | Основной язык программирования
 🔌 Dependency Injection | VContainer | Организация зависимостей
 🎨 UI Pattern | MVP/MVVM | Архитектура UI
-📱 Платформы | PC, WebGL | Мультиплатформенная поддержка
+📱 Платформы | WebGL | Мультиплатформенная поддержка
 
----
-
-📷 **Скриншоты / Демонстрация**
-Добавьте в `/docs/media` изображения и гифки:
-```
-/docs/media/
-  battle_4x4.png
-  qte_example.gif
-  ui_screen.png
-```
-И вставьте сюда для визуального представления проекта.
 
