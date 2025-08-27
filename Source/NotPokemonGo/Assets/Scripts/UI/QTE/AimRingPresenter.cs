@@ -23,10 +23,6 @@ namespace UI.QTE
                 _view.Successed += OnSuccess;
                 _view.Invalided += OnFail;
             }
-            else
-            {
-                Completed?.Invoke(false);
-            }
         }
 
         public override void Disable()
@@ -49,13 +45,11 @@ namespace UI.QTE
         private void OnSuccess(AimRingView view)
         {
             Disable();
-            Completed?.Invoke(true);
         }
 
         private void OnFail(AimRingView view)
         {
             Disable();
-            Completed?.Invoke(false);
         }
     }
 }

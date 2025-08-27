@@ -31,16 +31,8 @@ namespace Services.QTEServices
 
             switch (qteConfig.QTEType)
             {
-                case QTEType.Swipe:
-                    _qtePresenter = new SwipePresenter();
-                    break;
-
                 case QTEType.AimRing:
                     _qtePresenter = new AimRingPresenter();
-                    break;
-
-                default:
-                    _qtePresenter = new StubQTEPresenter();
                     break;
             }
 

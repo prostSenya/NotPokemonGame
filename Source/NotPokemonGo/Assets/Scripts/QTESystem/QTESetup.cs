@@ -17,7 +17,5 @@ namespace QTESystem
         public float TargetTime;
         public float Offset;
         public float TimeToNextTarget;
-
-        public SwipeDirection Direction;
     }
 }
