@@ -1,4 +1,3 @@
-[readme.md](https://github.com/user-attachments/files/22012748/readme.md)
 💎 NotPokemonGame  
 JRPG с пошаговыми боями и QTE на Unity  
 Unity • C# • VContainer
@@ -227,7 +226,7 @@ namespace Infrastructure.StateMachines.BattleStateMachine.States
 - Успех или провал влияет на силу или результат способности.
 
 🎮 **UI**
-- Реализован через презентеры (MVP/MVVM).
+- Реализован через презентеры (MVP).
 
 ---
 
