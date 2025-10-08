@@ -2,7 +2,6 @@
 using Infrastructure.StateMachines.GlobalStateMachine;
 using Infrastructure.StateMachines.GlobalStateMachine.States;
 using Infrastructure.StateMachines.States;
-using InputServices;
 using Services;
 using Services.InputServices;
 using UnityEngine;
@@ -14,7 +13,6 @@ namespace Infrastructure.DI.Initializers.Globals
     public class GameScopeInitializer : MonoBehaviour, IInitializable, ICoroutineRunner
     {
         private IGameStateMachine _gameStateMachine;
-        private IInputReader _inputReader;
 
         [Inject]
         public void Construct(IGameStateMachine gameStateMachine)

@@ -18,12 +18,13 @@ namespace Services.StaticDataServices
     public class StaticDataService : IStaticDataService
     {
         private readonly IResourceLoader _resourceLoader;
-
+ 
         private Dictionary<AbilityType, AbilityConfig> _abilityConfigs;
         private Dictionary<StatusType, StatusTypeIcon> _statusTypeIcons;
         private Dictionary<UnitType, UnitConfig> _unitConfigs;
         private Dictionary<int, PlatoonSpawnContainer> _spawnPositionContainer;
-
+        private Dictionary<AbilityType, QTEConfig> _qteConfigs;
+        
         private List<LevelConfig> _levelConfigs;
 
         public UnitSkinItemView UnitSkinItemViewPrefab { get; private set; }
@@ -38,10 +39,11 @@ namespace Services.StaticDataServices
             LoadUnitSkinItemView();
             LoadCharacterSelectionScreenPanel();
             LoadPlatoonPositionContainer();
+            LoadQTEConfigs();
             LoadLevelConfigs();
         }
 
-        public List<LevelConfig> GetLevelConfigs() =>
+        public List<LevelConfig> GetLevelConfigs() => 
             _levelConfigs.ToList();
 
         public AbilityConfig GetAbilityConfig(AbilityType abilityType)
@@ -76,32 +78,36 @@ namespace Services.StaticDataServices
             throw new KeyNotFoundException($"No character config found for mode {unitType}");
         }
 
-        public List<AbilityConfig> GetAllAbilityConfigs() =>
+        public List<AbilityConfig> GetAllAbilityConfigs() => 
             _abilityConfigs.Values.ToList();
 
-        public QTEConfig GetQTEConfig(AbilityType abilityType, QTEType qteMode)
+        public QTEConfig GetQTEConfig(AbilityType abilityType)
         {
-            if (_abilityConfigs.TryGetValue(abilityType, out AbilityConfig abilityConfig))
-                return abilityConfig.QteConfig;
+            if (_qteConfigs.TryGetValue(abilityType, out QTEConfig getQteConfig))
+                return getQteConfig;
 
-            throw new KeyNotFoundException($"No qte config found for mode {qteMode}");
-            // if (_qteConfigs.TryGetValue(qteMode, out QTEConfig getQteConfig))
-            //     return getQteConfig;
+            throw new KeyNotFoundException($"No qte config found for mode {abilityType}");
         }
 
-        private void LoadLevelConfigs() =>
+        private void LoadLevelConfigs()
+        {
             _levelConfigs = Resources.LoadAll<LevelConfig>(Constants.AssetPath.LevelConfigsPath).ToList();
+        }
 
-        public void LoadUnitSkinItemView() =>
+        private void LoadQTEConfigs()
+        {
+            _qteConfigs = Resources.LoadAll<QTEConfig>(Constants.AssetPath.QTEConfigs)
+                .ToDictionary(x => x.AbilityType, x => x);
+        }
+        
+        public void LoadUnitSkinItemView() => 
             UnitSkinItemViewPrefab = _resourceLoader.Load<UnitSkinItemView>(Constants.AssetPath.CharacterSkinItemName);
 
         public CharactersCatalogStaticData LoadCharacterCatalogStaticDatas() =>
             _resourceLoader.LoadScriptableObject<CharactersCatalogStaticData>(Constants.AssetPath.CatalogPath);
-
+        
         private void LoadCharacterSelectionScreenPanel() =>
-            CharacterSelectionScreenContainer =
-                _resourceLoader.Load<CharacterSelectionScreenContainer>(
-                    Constants.AssetPath.CharacterSelectionCanvasName);
+            CharacterSelectionScreenContainer = _resourceLoader.Load<CharacterSelectionScreenContainer>(Constants.AssetPath.CharacterSelectionCanvasName);
 
         private void LoadUnitConfigs() =>
             _unitConfigs = Resources.LoadAll<UnitConfig>(Constants.AssetPath.CharacterConfigsPath)
@@ -121,8 +127,7 @@ namespace Services.StaticDataServices
 
         private void LoadPlatoonPositionContainer()
         {
-            _spawnPositionContainer = Resources
-                .LoadAll<PlatoonSpawnContainer>(Constants.AssetPath.PlatoonContainersPath)
+            _spawnPositionContainer = Resources.LoadAll<PlatoonSpawnContainer>(Constants.AssetPath.PlatoonContainersPath)
                 .ToDictionary(x => x.Count, x => x);
         }
     }

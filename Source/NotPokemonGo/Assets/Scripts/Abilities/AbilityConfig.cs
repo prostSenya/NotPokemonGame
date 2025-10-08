@@ -15,7 +15,5 @@ namespace Abilities
         [field: SerializeField] public List<ParticleSystem> EndAnimationParticles { get; private set; }
         [field: SerializeField] public List<AbilityPhase> Phases { get; private set; }
         [field: SerializeField] public List<AbilityStatSetup> AbilityStatSetup { get; private set; }
-        
-        [field: SerializeField] public QTEConfig QteConfig { get; private set; }
     }
 }

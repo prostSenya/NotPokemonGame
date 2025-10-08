@@ -1,11 +1,11 @@
 using System;
-using QTESystem;
+using Abilities;
 
 namespace Services.QTEServices
 {
     public interface IQTEService
     {
-        void Start(QTEType qteType = QTEType.AimRing);
+        void Start(AbilityType abilityType);
         event Action <bool> Completed;
     }
 }

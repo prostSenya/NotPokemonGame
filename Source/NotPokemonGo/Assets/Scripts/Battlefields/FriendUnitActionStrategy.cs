@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using Abilities;
 using Abilities.MV;
 using Infrastructure.StateMachines.BattleStateMachine;
 using Infrastructure.StateMachines.BattleStateMachine.States;
-using InputServices;
+using Services.InputServices;
+using Services.RaycastServices;
 using UI.Ability;
 using Units;
 using UnityEngine;
@@ -16,12 +18,13 @@ namespace Battlefields
         private readonly Battlefield _battlefield;
         private readonly Unit _source;
 
-        private IRaycasterService _raycasterService;
+        private IRaycastService _raycastService;
         private ISourceProvider _sourceProvider;
         private IAbilityProvider _abilityProvider;
         private ITargetSelector _targetSelector;
         private AbilityPanelPresenter _abilityPanelPresenter;
         private IBattleStateMachine _battleStateMachine;
+        private IInputReader _inputReader;
 
         public FriendUnitActionStrategy(Battlefield battlefield, Unit source)
         {
@@ -31,17 +34,19 @@ namespace Battlefields
 
         [Inject]
         public void Initialize(
-            IRaycasterService raycasterService,
+            IRaycastService raycastService,
             ISourceProvider sourceProvider,
             IAbilityProvider abilityProvider,
             ITargetSelector targetSelector,
             IBattleStateMachine battleStateMachine,
-            AbilityPanelPresenter abilityPanelPresenter
+            AbilityPanelPresenter abilityPanelPresenter,
+            IInputReader inputReader
             )
         {
+            _inputReader = inputReader;
             _battleStateMachine = battleStateMachine;
             _abilityProvider = abilityProvider;
-            _raycasterService = raycasterService;
+            _raycastService = raycastService;
             _sourceProvider = sourceProvider;
             _targetSelector = targetSelector;
             _abilityPanelPresenter = abilityPanelPresenter;
@@ -53,7 +58,7 @@ namespace Battlefields
             ShowAbilityInfos(_source.AbilityModels);
             _sourceProvider.Remember(_source);
 
-            _raycasterService.UnitSearched += OnUnitSearched;
+            _inputReader.LeftMouseButtonPressed += LeftMouseButtonClicked;
             _source.Step.ActionEnded += OnAnimationActionEnded;
         }
 
@@ -61,13 +66,16 @@ namespace Battlefields
         {
             base.Disable();
 
+            _inputReader.LeftMouseButtonPressed -= LeftMouseButtonClicked;
             _source.Step.ActionEnded -= OnAnimationActionEnded;
-            _raycasterService.UnitSearched -= OnUnitSearched;
             _sourceProvider.Discard();
         }
 
-        private void OnUnitSearched(Unit unit)
+        private void LeftMouseButtonClicked()
         {
+            if (_raycastService.Raycast(out Unit unit) == false)
+                return;
+
             if (_abilityProvider.AbilityModel == null)
                 return;
 
@@ -80,11 +88,12 @@ namespace Battlefields
                     Debug.Log("Выбрали союзника");
                     break;
 
-                case PlatoonType.Enemies: //Вот по ходу атсюдава дернуть
+                case PlatoonType.Enemies: 
                     _source.Step.SetAbilityModel(_abilityProvider.AbilityModel, _source, unit);
-                    //_animationProcessingService.PlayAnimation(_sourceProvider.Source, _abilityProvider.AbilityModel.AbilityType);
-                    _targetSelector.Remember(unit, _abilityProvider.AbilityModel.TargetMode); // запоминаем цель
+                    _targetSelector.Remember(unit); 
                     _abilityPanelPresenter.Disable();
+                    
+                    _battleStateMachine.Enter<QTEBattleState, AbilityType>(_abilityProvider.AbilityModel.AbilityType);
                     break;
 
                 default:

@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections;
 using Abilities;
 using QTESystem;
 using Services.StaticDataServices;
 using UI.QTE;
+using UnityEngine;
+using VContainer;
+using VContainer.Unity;
 
 namespace Services.QTEServices
 {
@@ -10,43 +14,46 @@ namespace Services.QTEServices
     {
         private readonly IStaticDataService _staticDataService;
         private readonly ICoroutineRunner _coroutineRunner;
-        private readonly IAbilityProvider _abilityProvider;
+        private readonly IObjectResolver _objectResolver;
 
-        private QTEPresenter _qtePresenter;
-        public event Action<bool> Completed;
-
-        public QTEService(
-            IStaticDataService staticDataService,
-            ICoroutineRunner coroutineRunner,
-            IAbilityProvider abilityProvider)
+        public event Action <bool> Completed; 
+        
+        public QTEService(IStaticDataService staticDataService, ICoroutineRunner coroutineRunner, IObjectResolver objectResolver)
         {
             _staticDataService = staticDataService;
             _coroutineRunner = coroutineRunner;
-            _abilityProvider = abilityProvider;
+            _objectResolver = objectResolver;
+        }
+        
+        public void Start(AbilityType abilityType)
+        {
+            QTEConfig qteConfig = _staticDataService.GetQTEConfig(abilityType);
+
+            _coroutineRunner.StartCoroutine(StartQTE(qteConfig));
         }
 
-        public void Start(QTEType qteType = QTEType.AimRing)
+        private IEnumerator StartQTE(QTEConfig qteConfig)
         {
-            QTEConfig qteConfig = _staticDataService.GetQTEConfig(_abilityProvider.AbilityModel.AbilityType, qteType);
-
-            switch (qteConfig.QTEType)
+            foreach (QTEPhaseSetup qtePhaseSetup in qteConfig.QtePhaseSetups)
             {
-                case QTEType.AimRing:
-                    _qtePresenter = new AimRingPresenter();
-                    break;
+                QTEButtonView qteButtonView = _objectResolver.Instantiate(qtePhaseSetup.QTEButtonView);
+                QTEPhasePresenter qtePhasePresenter = new QTEPhasePresenter(qtePhaseSetup, qteButtonView);
+
+                qtePhasePresenter.Enable();
+                
+                yield return new WaitWhile(qtePhasePresenter.IsActive);
+
+                qtePhasePresenter.Disable();
+
+                if (qtePhasePresenter.IsSuccess == false)
+                {
+                    Completed?.Invoke(false);
+                    yield break;
+                }
             }
-
-            _qtePresenter.Completed += OnCompleted;
-            _qtePresenter.Enable(qteConfig, _coroutineRunner);
-        }
-
-        private void OnCompleted(bool success)
-        {
-            _qtePresenter.Completed -= OnCompleted;
-
-            _qtePresenter.Disable();
-
-            Completed?.Invoke(success);
+            
+            Debug.Log("Stop foreach QTE");
+            Completed?.Invoke(true);
         }
     }
 }
