@@ -28,7 +28,7 @@ namespace UI.QTE
     private Vector2 _visualEndSize;
 
     public override event Action<QTEButtonView> Successed;
-    public override event Action<QTEButtonView> Invalided;
+    public override event Action<QTEButtonView, QTEInvalidReason> Invalided;
 
 
     private bool _isSuccesTime => CurrentTime >= TargetTime - Offset && CurrentTime <= TargetTime;
@@ -96,7 +96,7 @@ namespace UI.QTE
       if (_isSuccesTime)
         Successed?.Invoke(this);
       else
-        Invalided?.Invoke(this);
+        Invalided?.Invoke(this, QTEInvalidReason.WrongInput);
     }
 
     public void Reset()

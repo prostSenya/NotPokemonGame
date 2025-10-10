@@ -1,11 +1,9 @@
-﻿using QTESystem;
-using VContainer;
+using QTESystem;
 
 namespace UI.QTE
 {
   public class QTEPhasePresenter
   {
-    private readonly IObjectResolver _objectResolver;
     private readonly QTEButtonView _qteButtonView;
     private bool _isActive;
 
@@ -37,13 +35,13 @@ namespace UI.QTE
     public bool IsActive() =>
       _isActive;
 
-    private void OnInvalided(QTEButtonView qteButtonView)
+    private void OnInvalided(QTEButtonView qteButtonView, QTEInvalidReason reason)
     {
       qteButtonView.Invalided -= OnInvalided;
       _isActive = false;
       IsSuccess = false;
     }
-    
+
     private void OnSuccessed(QTEButtonView qteButtonView)
     {
       qteButtonView.Successed -= OnSuccessed;

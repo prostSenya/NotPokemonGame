@@ -8,7 +8,7 @@ namespace UI.QTE
         public float CurrentTime { get; protected set; }
 
         public abstract event Action<QTEButtonView> Successed;
-        public abstract event Action<QTEButtonView> Invalided;
+        public abstract event Action<QTEButtonView, QTEInvalidReason> Invalided;
 
         public virtual void Initialize(QTEPhasePresenter qtePhasePresenter)
         { }

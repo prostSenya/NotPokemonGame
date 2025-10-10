@@ -20,8 +20,8 @@ namespace UI.QTE
     private int _clickCount;
 
     public override event Action<QTEButtonView> Successed;
-    public override event Action<QTEButtonView> Invalided;
-    
+    public override event Action<QTEButtonView, QTEInvalidReason> Invalided;
+
     [Inject]
     public void Construct(IInputReader inputReader, IRaycastService raycastService, ITargetSelector targetSelector)
     {
@@ -29,7 +29,7 @@ namespace UI.QTE
       _targetSelector = targetSelector;
       _raycastService = raycastService;
       _inputReader.LeftMouseButtonPressed += OnLeftMouseButtonClicked;
-      
+
       _units = _targetSelector.GetTargets(TargetMode.Single).Where(x => x != null).ToList();
 
       foreach (var unit in _units)
@@ -55,7 +55,7 @@ namespace UI.QTE
 
       if (CurrentTime >= _qtePhasePresenter.QtePhaseSetup.TargetTime)
       {
-        Invalided?.Invoke(this);
+        Invalided?.Invoke(this, QTEInvalidReason.Timeout);
         Debug.LogWarning("прошло время QTERaycasterView");
       }
     }
@@ -64,7 +64,7 @@ namespace UI.QTE
     {
       if (_raycastService.Raycast(out Unit unit) == false)
       {
-        Invalided?.Invoke(this);
+        Invalided?.Invoke(this, QTEInvalidReason.WrongInput);
 
         Debug.LogWarning("не попал в юнита QTERaycasterView");
         return;
@@ -84,12 +84,12 @@ namespace UI.QTE
           else
           {
             Debug.LogWarning("не попал в юнита в for QTERaycasterView");
-            Invalided?.Invoke(this);
+            Invalided?.Invoke(this, QTEInvalidReason.WrongInput);
           }
         }
       }
 
-      if (_clickCount == _qtePhasePresenter.QtePhaseSetup.ClickCount) 
+      if (_clickCount == _qtePhasePresenter.QtePhaseSetup.ClickCount)
         Successed?.Invoke(this);
     }
 
@@ -112,7 +112,7 @@ namespace UI.QTE
     {
       _renderer.material.SetColor("_Color", Color.red);
     }
-    
+
     public void MarkInterract()
     {
       _renderer.material.SetColor("_Color", Color.yellow);

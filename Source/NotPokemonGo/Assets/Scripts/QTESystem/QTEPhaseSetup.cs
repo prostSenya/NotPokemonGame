@@ -1,5 +1,4 @@
 using System;
-using Services.QTEServices;
 using UI.QTE;
 using UnityEngine.UI;
 
@@ -17,6 +16,8 @@ namespace QTESystem
         public float TargetTime;
         public float Offset;
         public float TimeToNextTarget;
+
+        public QTETargetMovementPathConfig TargetMovementPathConfig;
 
         // поле которое отвечает за то, через сколько появится следующая QTE
     }
