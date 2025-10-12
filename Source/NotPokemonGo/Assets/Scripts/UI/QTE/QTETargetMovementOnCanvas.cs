@@ -6,8 +6,9 @@ namespace UI.QTE
 {
   public class QTETargetMovementOnCanvas : QTEButtonView
   {
-   private const float StartThreshold = 0.05f;       
-    private const float CompletionThreshold = 0.98f;  
+    private const float StartThreshold = 0.05f;
+    private const float CompletionThreshold = 0.98f;
+    private const int MousePointerId = -1;
 
     [Header("Geometry")]
     [SerializeField] private RectTransform _trackRect;   
@@ -30,27 +31,42 @@ namespace UI.QTE
     private bool _isDragging;
     private bool _isCompleted;
     private bool _isFailed;
-    private Vector2 _startPosition;
+
+    private float _baseY;
+    private float _startX;
+    private float _startProgress;
+    private float _minX;
+    private float _maxX;
+    private bool _startCaptured;
+
+    private bool _pointerIsTouch;
+    private int _activeTouchId = MousePointerId;
+    private Vector2 _lastPointerPosition;
 
     public override event Action<QTEButtonView> Successed;
     public override event Action<QTEButtonView> Invalided;
 
     private void Awake()
     {
-      _startPosition = _handleRect.anchoredPosition;
-
       CacheReferences();
-      EnsureBindings();
+      if (!EnsureBindings())
+      {
+        enabled = false;
+        return;
+      }
+
+      RefreshGeometryCache(captureStartFromHandle: true);
     }
 
     private void OnEnable()
     {
       if (!EnsureBindings())
       {
-        enabled = false; 
+        enabled = false;
         return;
       }
-      
+
+      RefreshGeometryCache(captureStartFromHandle: false);
       ResetInternalState();
     }
 
@@ -58,6 +74,7 @@ namespace UI.QTE
     {
       base.Initialize(qtePhasePresenter);
       _phasePresenter = qtePhasePresenter;
+      RefreshGeometryCache(captureStartFromHandle: false);
       ResetInternalState();
     }
 
@@ -108,55 +125,43 @@ namespace UI.QTE
     #region Input
     private void HandleInput()
     {
-      if (Input.GetMouseButtonDown(0))
-        TryStartDrag(Input.mousePosition);
-
-      if (_isDragging && Input.GetMouseButton(0))
-        ContinueDrag(Input.mousePosition);
-
-      if (_isDragging && Input.GetMouseButtonUp(0))
+      if (!_isDragging)
       {
-        if (_isCompleted == false)
-          Fail();
-        _isDragging = false;
+        if (GetPointerDown(out Vector2 startPosition, out bool isTouch, out int touchId) &&
+            TryStartDrag(startPosition))
+        {
+          _isDragging = true;
+          _pointerIsTouch = isTouch;
+          _activeTouchId = touchId;
+          ContinueDrag(startPosition);
+        }
+
+        return;
       }
 
-      if (Input.touchCount > 0)
+      if (GetPointer(out Vector2 pointerPosition))
+        ContinueDrag(pointerPosition);
+
+      if (GetPointerUp(out _))
       {
-        Touch t = Input.GetTouch(0);
-        switch (t.phase)
-        {
-          case TouchPhase.Began:
-            TryStartDrag(t.position);
-            break;
-          case TouchPhase.Moved:
-          case TouchPhase.Stationary:
-            if (_isDragging) ContinueDrag(t.position);
-            break;
-          case TouchPhase.Canceled:
-          case TouchPhase.Ended:
-            if (_isDragging)
-            {
-              if (_isCompleted == false)
-                Fail();
-              _isDragging = false;
-            }
-            break;
-        }
+        if (!_isCompleted)
+          Fail();
+        else
+          StopDragging();
       }
     }
 
-    private void TryStartDrag(Vector2 screenPosition)
+    private bool TryStartDrag(Vector2 screenPosition)
     {
-      if (!ScreenToLocalOnTrack(screenPosition, out Vector2 local)) return;
-      if (!IsWithinBounds(local)) return;
+      if (!ScreenToLocalOnTrack(screenPosition, out Vector2 local)) return false;
+      if (!IsWithinBounds(local)) return false;
 
       float normalized = LocalToProgress(local.x);
-      if (normalized > StartThreshold) 
-        return;
+      if (normalized > StartThreshold)
+        return false;
 
-      _isDragging = true;
       SetHandleByProgress(0f);
+      return true;
     }
 
     private void ContinueDrag(Vector2 screenPosition)
@@ -169,16 +174,120 @@ namespace UI.QTE
         return;
       }
 
-      Rect rect = _trackRect.rect;
-      float clampedX = Mathf.Clamp(local.x, rect.xMin, rect.xMax);
+      float clampedX = Mathf.Clamp(local.x, _minX, _maxX);
 
-      float newProgress = Mathf.InverseLerp(rect.xMin, rect.xMax, clampedX);
+      float newProgress = LocalToProgress(clampedX);
       newProgress = Mathf.Max(GetCurrentProgress(), newProgress);
 
       SetHandleByProgress(newProgress);
 
       if (newProgress >= CompletionThreshold)
         Complete();
+    }
+
+    private bool GetPointerDown(out Vector2 position, out bool isTouch, out int touchId)
+    {
+      if (Input.touchCount > 0)
+      {
+        for (int i = 0; i < Input.touchCount; i++)
+        {
+          Touch touch = Input.GetTouch(i);
+          if (touch.phase == TouchPhase.Began)
+          {
+            position = touch.position;
+            isTouch = true;
+            touchId = touch.fingerId;
+            _lastPointerPosition = position;
+            return true;
+          }
+        }
+      }
+
+      if (Input.GetMouseButtonDown(0))
+      {
+        position = Input.mousePosition;
+        isTouch = false;
+        touchId = MousePointerId;
+        _lastPointerPosition = position;
+        return true;
+      }
+
+      position = default;
+      isTouch = false;
+      touchId = MousePointerId;
+      return false;
+    }
+
+    private bool GetPointer(out Vector2 position)
+    {
+      if (_pointerIsTouch)
+      {
+        for (int i = 0; i < Input.touchCount; i++)
+        {
+          Touch touch = Input.GetTouch(i);
+          if (touch.fingerId == _activeTouchId)
+          {
+            if (touch.phase == TouchPhase.Canceled || touch.phase == TouchPhase.Ended)
+            {
+              position = touch.position;
+              _lastPointerPosition = position;
+              return false;
+            }
+
+            position = touch.position;
+            _lastPointerPosition = position;
+            return true;
+          }
+        }
+
+        position = default;
+        return false;
+      }
+
+      if (Input.GetMouseButton(0))
+      {
+        position = Input.mousePosition;
+        _lastPointerPosition = position;
+        return true;
+      }
+
+      position = default;
+      return false;
+    }
+
+    private bool GetPointerUp(out Vector2 position)
+    {
+      if (_pointerIsTouch)
+      {
+        for (int i = 0; i < Input.touchCount; i++)
+        {
+          Touch touch = Input.GetTouch(i);
+          if (touch.fingerId == _activeTouchId &&
+              (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled))
+          {
+            position = touch.position;
+            return true;
+          }
+        }
+
+        if (_activeTouchId != MousePointerId)
+        {
+          position = _lastPointerPosition;
+          return true;
+        }
+
+        position = default;
+        return false;
+      }
+
+      if (Input.GetMouseButtonUp(0))
+      {
+        position = Input.mousePosition;
+        return true;
+      }
+
+      position = default;
+      return false;
     }
     #endregion
 
@@ -191,29 +300,29 @@ namespace UI.QTE
 
     private float LocalToProgress(float localX)
     {
-      Rect rect = _trackRect.rect;
-      return Mathf.InverseLerp(rect.xMin, rect.xMax, localX);
+      return RawToProgress(GetRawFromPivot(localX));
     }
 
     private float GetCurrentProgress()
     {
-      Rect rect = _trackRect.rect;
-      float x = _handleRect.anchoredPosition.x;
-      return Mathf.InverseLerp(rect.xMin, rect.xMax, x);
+      return RawToProgress(GetRawFromPivot(_handleRect.anchoredPosition.x));
     }
 
     private void SetHandleByProgress(float progress)
     {
-      Rect rect = _trackRect.rect;
-      float x = Mathf.Lerp(rect.xMin, rect.xMax, progress);
-      Vector2 position = _handleRect.anchoredPosition;
-      position.x = x;
-      position.y = 0f;
+      if (_handleRect == null)
+        return;
 
-      if (progress == 0)
-        _handleRect.anchoredPosition = _startPosition;
-      else
-        _handleRect.anchoredPosition = position;
+      if (Mathf.Approximately(_maxX, _minX))
+      {
+        _handleRect.anchoredPosition = new Vector2(_startX, _baseY);
+        return;
+      }
+
+      float raw = ProgressToRaw(progress);
+      float x = Mathf.Lerp(_minX, _maxX, raw);
+
+      _handleRect.anchoredPosition = new Vector2(x, _baseY);
     }
 
     private bool IsWithinBounds(Vector2 localPoint)
@@ -231,6 +340,34 @@ namespace UI.QTE
 
       return verticalDistance <= allowedVertical;
     }
+
+    private float GetRawFromPivot(float pivotX)
+    {
+      if (Mathf.Approximately(_maxX, _minX))
+        return _startProgress;
+
+      float raw = Mathf.InverseLerp(_minX, _maxX, Mathf.Clamp(pivotX, _minX, _maxX));
+      return Mathf.Max(raw, _startProgress);
+    }
+
+    private float RawToProgress(float raw)
+    {
+      if (Mathf.Approximately(1f, _startProgress))
+        return 1f;
+
+      return Mathf.InverseLerp(_startProgress, 1f, Mathf.Clamp(raw, _startProgress, 1f));
+    }
+
+    private float ProgressToRaw(float progress)
+    {
+      if (progress <= 0f)
+        return _startProgress;
+
+      if (progress >= 1f || Mathf.Approximately(1f, _startProgress))
+        return 1f;
+
+      return Mathf.Lerp(_startProgress, 1f, Mathf.Clamp01(progress));
+    }
     #endregion
 
     #region End states
@@ -239,7 +376,7 @@ namespace UI.QTE
       if (_isCompleted || _isFailed) return;
 
       _isCompleted = true;
-      _isDragging = false;
+      StopDragging();
       SetHandleByProgress(1f);
       Successed?.Invoke(this);
     }
@@ -249,7 +386,7 @@ namespace UI.QTE
       if (_isFailed || _isCompleted) return;
 
       _isFailed = true;
-      _isDragging = false;
+      StopDragging();
       Invalided?.Invoke(this);
     }
     #endregion
@@ -272,19 +409,22 @@ namespace UI.QTE
 
       if (!EnsureBindings())
       {
-        enabled = false; 
+        enabled = false;
         return;
       }
+
+      RefreshGeometryCache(captureStartFromHandle: false);
 
       _timeLimit = ResolveTimeLimit();
       _timeScale = ResolveTimeScale();
 
-      _isDragging = _isCompleted = _isFailed = false;
+      _isCompleted = _isFailed = false;
+      StopDragging();
       CurrentTime = 0f;
 
       SetHandleByProgress(0f);
     }
-    
+
     private bool EnsureBindings()
     {
       // Если не задан трек – берём RectTransform объекта со скриптом
@@ -325,7 +465,114 @@ namespace UI.QTE
       return true;
     }
 
-    
+
+    private void StopDragging()
+    {
+      _isDragging = false;
+      _pointerIsTouch = false;
+      _activeTouchId = MousePointerId;
+      _lastPointerPosition = Vector2.zero;
+    }
+
+    private void RefreshGeometryCache(bool captureStartFromHandle)
+    {
+      if (_trackRect == null || _handleRect == null)
+        return;
+
+      if (!_startCaptured)
+        captureStartFromHandle = true;
+
+      NormalizeHandleAnchors();
+
+      Rect trackRect = _trackRect.rect;
+      float handleWidth = _handleRect.rect.width;
+      float pivotX = _handleRect.pivot.x;
+
+      _minX = trackRect.xMin + handleWidth * pivotX;
+      _maxX = trackRect.xMax - handleWidth * (1f - pivotX);
+
+      if (_maxX < _minX)
+      {
+        float center = trackRect.center.x;
+        _minX = _maxX = center;
+      }
+
+      if (captureStartFromHandle)
+      {
+        Vector2 anchored = _handleRect.anchoredPosition;
+        _baseY = anchored.y;
+        _startX = Mathf.Clamp(anchored.x, _minX, _maxX);
+        _handleRect.anchoredPosition = new Vector2(_startX, _baseY);
+        _startCaptured = true;
+      }
+      else if (!_startCaptured)
+      {
+        Vector2 anchored = _handleRect.anchoredPosition;
+        _baseY = anchored.y;
+        _startX = Mathf.Clamp(anchored.x, _minX, _maxX);
+        _startCaptured = true;
+      }
+      else
+      {
+        _startX = Mathf.Clamp(_startX, _minX, _maxX);
+      }
+
+      _startProgress = Mathf.Approximately(_maxX, _minX)
+        ? 0f
+        : Mathf.InverseLerp(_minX, _maxX, _startX);
+      _startProgress = Mathf.Clamp01(_startProgress);
+    }
+
+    private void NormalizeHandleAnchors()
+    {
+      if (_handleRect == null)
+        return;
+
+      Vector3 localPosition = _handleRect.localPosition;
+      Vector2 size = _handleRect.rect.size;
+      Vector2 anchorMin = _handleRect.anchorMin;
+      Vector2 anchorMax = _handleRect.anchorMax;
+
+      bool changed = false;
+
+      if (!Mathf.Approximately(anchorMin.x, anchorMax.x))
+      {
+        float anchorX = Mathf.Lerp(anchorMin.x, anchorMax.x, _handleRect.pivot.x);
+        anchorMin.x = anchorMax.x = anchorX;
+        changed = true;
+      }
+
+      if (!Mathf.Approximately(anchorMin.y, anchorMax.y))
+      {
+        float anchorY = Mathf.Lerp(anchorMin.y, anchorMax.y, _handleRect.pivot.y);
+        anchorMin.y = anchorMax.y = anchorY;
+        changed = true;
+      }
+
+      if (!changed)
+        return;
+
+      _handleRect.anchorMin = anchorMin;
+      _handleRect.anchorMax = anchorMax;
+      _handleRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, size.x);
+      _handleRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size.y);
+      _handleRect.localPosition = localPosition;
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+      if (Application.isPlaying)
+        return;
+
+      CacheReferences();
+
+      if (EnsureBindings())
+        RefreshGeometryCache(captureStartFromHandle: true);
+    }
+#endif
+
+
     #endregion
   }
 }
